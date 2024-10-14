@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Date Picker Example</title>
+</head>
+<body>
+
+    <form>
+        <label for="date">Select a date (Present and Future only):</label>
+        <input type="date" id="date" name="date" min="">
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        // Set the minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById("date").setAttribute("min", today);
+    </script>
+
+</body>
+</html>

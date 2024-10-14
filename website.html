@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Booking Chatbot</title>
+
+    <!-- Load jQuery first -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- jQuery UI for calendar (datepicker) -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+    <!-- Bootstrap for styling -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
+
+    <style type="text/css">
+        .fixed-panel {
+            min-height: 400px;
+            max-height: 400px;
+            background-color: #19313c;
+            color: white;
+            overflow: auto;
+        }
+
+        .media-list {
+            overflow: auto;
+            display: table;
+        }
+
+        .panel {
+            border: 6px solid transparent;
+            border-radius: 25px;
+        }
+
+        .panel-info>.panel-heading {
+            background-color: #0c2735;
+        }
+
+        .panel-footer {
+            background-color: #0c2735;
+        }
+
+        body {
+            background: linear-gradient(135deg, rgba(96, 143, 149, 1) 0%, rgba(0, 133, 136, 1) 9%, rgba(12, 36, 73, 1) 52%, rgba(26, 30, 59, 1) 100%);
+            height: 100vh;
+        }
+
+        .container {
+            height: 100%;
+        }
+
+        .option-btn {
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <br /><br /><br />
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <div id="chatPanel" class="panel panel-info">
+                    <div class="panel-heading">
+                        <strong><span class="glyphicon glyphicon-globe"></span> Hotel Booking Chatbot (You: Green / Bot: White)</strong>
+                    </div>
+                    <div class="panel-body fixed-panel">
+                        <ul class="media-list"></ul>
+                    </div>
+                    <div class="panel-footer">
+                        <form method="post" id="chatbot-form">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Enter Message" name="messageText" id="messageText" autofocus />
+                                <span class="input-group-btn">
+                                    <button class="btn btn-info" type="button" id="chatbot-form-btn">Send</button>
+                                </span>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script>
+        $(function () {
+            const questions = [
+                { question: "What's your name?", key: "name" },
+                { question: "What date will you be checking in?", key: "checkin_date", type: "calendar" },
+                { question: "How many days will you be staying?", key: "days_for_checkout"},
+                { question: "How many guests will be staying?", key: "number_of_guests" },
+                { question: "What type of room would you prefer?", key: "room_type", options: ["Single", "Double", "Suite"] },
+                { question: "Do you have a preference for bed type?", key: "bed_preference", options: ["King", "Queen", "Twin"] },
+                { question: "Do you have any special requests or requirements?", key: "special_requests" },
+                { question: "Would you like to include meals with your stay?", key: "meal_preferences", options: ["Breakfast", "Half-board", "Full-board", "No meals"] },
+                { question: "Can I have your email ?", key: "contact_info_email" },
+                { question: "Can I have your phone number?", key: "contact_info_phone" },
+                { question: "How would you like to receive your booking confirmation?", key: "confirmation_preference", options: ["Email", "SMS"] },
+                { question: "Would you like to receive updates or promotions from us in the future?", key: "future_communication", options: ["Yes", "No"] },
+                { question: "Would you like to confirm the booking?", key: "booking_confirmation", options: ["Yes", "No"] }
+            ];
+
+            let currentQuestionIndex = 0;
+            const responses = {};
+
+            function displayQuestion() {
+                const questionObj = questions[currentQuestionIndex];
+                const questionText = questionObj.question;
+
+                $(".media-list").append(
+                    '<li class="media"><div class="media-body"><div class="media"><div style="color:white;" class="media-body">' +
+                    questionText + '<hr/></div></div></div></li>'
+                );
+
+                if (questionObj.type === "calendar") {
+                    $("#messageText").datepicker({
+                        dateFormat: "mm/dd/yy",
+                        onSelect: function (dateText) {
+                            handleUserResponse(dateText);
+                            $("#messageText").datepicker("destroy");
+                            $('#messageText').val('');
+                        }
+                    }).focus();
+                    
+                } else if (questionObj.options) {
+                    questionObj.options.forEach(option => {
+                        $(".media-list").append(
+                            <button class="option-btn btn btn-info">${option}</button>
+                        );
+                    });
+
+                    $(".option-btn").click(function () {
+                        handleUserResponse($(this).text());
+                    });
+                }
+
+                scrollToBottom();
+            }
+
+            function handleUserResponse(responseText) {
+                const currentQuestionKey = questions[currentQuestionIndex].key;
+                responses[currentQuestionKey] = responseText;
+
+                $(".media-list").append(
+                    '<li class="media"><div class="media-body"><div class="media"><div style="text-align:right; color:#2EFE2E;" class="media-body">' +
+                    responseText + '<hr/></div></div></div></li>'
+                );
+
+                if (currentQuestionIndex < questions.length - 2) {
+                    currentQuestionIndex++;
+                    displayQuestion();
+                } else if(currentQuestionIndex == questions.length - 2){
+                    confirmBookingDetails();
+                } else if(currentQuestionIndex == questions.length - 1){
+                    if (responses["booking_confirmation"] == "Yes") {
+                        $(".media-list").append(
+                            '<li class="media"><div class="media-body"><div class="media"><div style="color:white;" class="media-body">Thank you! For choosing us. The booking confirmation will be sent to you soon<hr/></div></div></div></li>'
+                        );
+                    } else if (responses["booking_confirmation"] == "No") {
+                        $(".media-list").append(
+                            '<li class="media"><div class="media-body"><div class="media"><div style="color:white;" class="media-body">Thank you! For contacting us. If you want more clarification before booking feel free to call us at 9876543210<hr/></div></div></div></li>'
+                        );
+                    }
+                }
+                
+                scrollToBottom();
+            }
+
+            function confirmBookingDetails() {
+                $(".media-list").append(
+                    '<li class="media"><div class="media-body"><div class="media"><div style="color:white;" class="media-body">Thank you! Here’s a summary of your booking details:<hr/></div></div></div></li>'
+                );
+
+                Object.keys(responses).forEach(key => {
+                    const displayText = key.replace(/_/g, ' ');
+                    $(".media-list").append(
+                        `<li class="media">
+                            <div class="media-body">
+                                <div class="media">
+                                    <div style="color:white;" class="media-body">
+                                        <strong>${displayText}:</strong> ${responses[key]}<hr/>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>`
+                    );
+                });
+                
+                currentQuestionIndex++;
+                displayQuestion();
+                
+            }
+
+            function scrollToBottom() {
+                $(".fixed-panel").stop().animate({
+                    scrollTop: $(".fixed-panel")[0].scrollHeight
+                }, 1000);
+            }
+
+            $('#chatbot-form-btn').click(function (e) {
+                e.preventDefault();
+                $('#chatbot-form').submit();
+            });
+
+            $('#chatbot-form').submit(function (e) {
+                e.preventDefault();
+                const userInput = $('#messageText').val();
+                if (userInput.trim()) {
+                    handleUserResponse(userInput);
+                    $('#messageText').val('');
+                }
+            });
+
+            // Start by asking the first question
+            displayQuestion();
+        });
+    </script>
+</body>
+
+</html>
